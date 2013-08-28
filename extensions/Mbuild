@@ -10,6 +10,7 @@ obj-${build_ECHO}        += libxt_ECHO.so
 obj-${build_IPMARK}      += libxt_IPMARK.so
 obj-${build_LOGMARK}     += libxt_LOGMARK.so
 obj-${build_RAWNAT}      += libxt_RAWDNAT.so libxt_RAWSNAT.so
+obj-${build_RAWNAR}      += libxt_RAWDNAR.so libxt_RAWSNAR.so
 obj-${build_STEAL}       += libxt_STEAL.so
 obj-${build_SYSRQ}       += libxt_SYSRQ.so
 obj-${build_TARPIT}      += libxt_TARPIT.so

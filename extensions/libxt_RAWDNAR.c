@@ -23,6 +23,7 @@ enum {
 
 static const struct option rawdnat_tg_opts[] = {
 	{.name = "to-destination", .has_arg = true, .val = 't'},
+        {.name = "to-port",   .has_arg = true, .val = 'p'},
 	{},
 };
 
@@ -31,6 +32,7 @@ static void rawdnat_tg_help(void)
 	printf(
 "RAWDNAR target options:\n"
 "    --to-destination addr[/mask]    Address or network to map to\n"
+"    --to-port               0 - random port;\n"
 );
 }
 
@@ -40,7 +42,7 @@ rawdnat_tg4_parse(int c, char **argv, int invert, unsigned int *flags,
 {
 	struct xt_rawnat_tginfo *info = (void *)(*target)->data;
 	struct in_addr *a;
-	unsigned int mask;
+	unsigned int mask, port;
 	char *end;
 
 	switch (c) {
@@ -60,7 +62,15 @@ rawdnat_tg4_parse(int c, char **argv, int invert, unsigned int *flags,
 				"--to-destination", optarg);
 		memcpy(&info->addr.in, a, sizeof(*a));
 		*flags |= FLAGS_TO;
+                info->has_addr = 1;
 		return true;
+        case 'p':
+                info->port = 0;
+                if (!xtables_strtoui(optarg, NULL, &port, 0, 65535))
+                        xtables_param_act(XTF_BAD_VALUE, "RAWDNAR", "--to-port", optarg);
+                info->port = port;
+                info->has_port = 1;
+                return true;
 	}
 	return false;
 }
@@ -98,9 +108,6 @@ rawdnat_tg6_parse(int c, char **argv, int invert, unsigned int *flags,
 
 static void rawdnat_tg_check(unsigned int flags)
 {
-	if (!(flags & FLAGS_TO))
-		xtables_error(PARAMETER_PROBLEM, "RAWDNAR: "
-			"\"--to-destination\" is required.");
 }
 
 static void
@@ -108,9 +115,13 @@ rawdnat_tg4_save(const void *entry, const struct xt_entry_target *target)
 {
 	const struct xt_rawnat_tginfo *info = (const void *)target->data;
 
-	printf(" --to-destination %s/%u ",
+    if (info->has_addr)
+	    printf(" --to-destination %s/%u ",
 	       xtables_ipaddr_to_numeric(&info->addr.in),
 	       info->mask);
+
+    if (info->has_port)
+        printf(" --to-port %u ", info->port);
 }
 
 static void

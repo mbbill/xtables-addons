@@ -135,41 +135,47 @@ rawsnat_tg4(struct sk_buff **pskb, const struct xt_action_param *par)
 	bool cond;
 
 	iph = ip_hdr(*pskb);
-	new_addr = remask(iph->saddr, info->addr.ip, info->mask);
-        /*
-	if (iph->saddr == new_addr)
-		return XT_CONTINUE;
-        */
 	if (!skb_make_writable(pskb, rawnat4_writable_part(iph)))
 		return NF_DROP;
-
 	iph = ip_hdr(*pskb);
-	csum_replace4(&iph->check, iph->saddr, new_addr);
-	rawnat4_update_l4(*pskb, iph->saddr, new_addr);
-	iph->saddr = new_addr;
 
-        transport_hdr = (void *)iph + ip_hdrlen(*pskb);
-        get_random_bytes(&new_port, sizeof(new_port));
-        new_port = (new_port << 8) >> 4;
-	switch (iph->protocol) {
-	case IPPROTO_TCP:
-		tcph = transport_hdr;
-		inet_proto_csum_replace2(&tcph->check, *pskb, tcph->source, new_port, true);
-                tcph->source = new_port;
-		break;
-	case IPPROTO_UDP:
-	case IPPROTO_UDPLITE:
-		udph = transport_hdr;
-		cond = udph->check != 0;
-		cond |= (*pskb)->ip_summed == CHECKSUM_PARTIAL;
-		if (cond) {
-			inet_proto_csum_replace2(&udph->check, *pskb,
-				udph->source, new_port, true);
-			if (udph->check == 0)
-				udph->check = CSUM_MANGLED_0;
+        if (info->has_addr) {
+		new_addr = remask(iph->saddr, info->addr.ip, info->mask);
+
+		csum_replace4(&iph->check, iph->saddr, new_addr);
+		rawnat4_update_l4(*pskb, iph->saddr, new_addr);
+		iph->saddr = new_addr;
+	}
+
+	if (info->has_port) {
+
+		transport_hdr = (void *)iph + ip_hdrlen(*pskb);
+		if (!info->port) {
+			get_random_bytes(&new_port, sizeof(new_port));
+			new_port = (new_port << 8) >> 4;
+		} else
+			new_port = info->port;
+		new_port = htons(new_port);
+		switch (iph->protocol) {
+		case IPPROTO_TCP:
+			tcph = transport_hdr;
+			inet_proto_csum_replace2(&tcph->check, *pskb, tcph->source, new_port, true);
+			tcph->source = new_port;
+			break;
+		case IPPROTO_UDP:
+		case IPPROTO_UDPLITE:
+			udph = transport_hdr;
+			cond = udph->check != 0;
+			cond |= (*pskb)->ip_summed == CHECKSUM_PARTIAL;
+			if (cond) {
+				inet_proto_csum_replace2(&udph->check, *pskb,
+							 udph->source, new_port, true);
+				if (udph->check == 0)
+					udph->check = CSUM_MANGLED_0;
+			}
+			udph->source = new_port;
+			break;
 		}
-                udph->source = new_port;
-		break;
         }
 
 
@@ -189,43 +195,47 @@ rawdnat_tg4(struct sk_buff **pskb, const struct xt_action_param *par)
 	bool cond;
 
 	iph = ip_hdr(*pskb);
-	new_addr = remask(iph->daddr, info->addr.ip, info->mask);
-        /*
-	if (iph->daddr == new_addr)
-		return XT_CONTINUE;
-        */
 	if (!skb_make_writable(pskb, rawnat4_writable_part(iph)))
 		return NF_DROP;
-
 	iph = ip_hdr(*pskb);
         transport_hdr = (void *)iph + ip_hdrlen(*pskb);
-	csum_replace4(&iph->check, iph->daddr, new_addr);
-	rawnat4_update_l4(*pskb, iph->daddr, new_addr);
-	iph->daddr = new_addr;
 
-        get_random_bytes(&new_port, sizeof(new_port));
-        new_port = (new_port << 8) >> 4;
-	switch (iph->protocol) {
-	case IPPROTO_TCP:
-		tcph = transport_hdr;
-		inet_proto_csum_replace2(&tcph->check, *pskb, tcph->dest, new_port, true);
-                tcph->dest = new_port;
-		break;
-	case IPPROTO_UDP:
-	case IPPROTO_UDPLITE:
-		udph = transport_hdr;
-		cond = udph->check != 0;
-		cond |= (*pskb)->ip_summed == CHECKSUM_PARTIAL;
-		if (cond) {
-			inet_proto_csum_replace2(&udph->check, *pskb,
-				udph->dest, new_port, true);
-			if (udph->check == 0)
-				udph->check = CSUM_MANGLED_0;
+	if (info->has_addr) {
+		new_addr = remask(iph->daddr, info->addr.ip, info->mask);
+		csum_replace4(&iph->check, iph->daddr, new_addr);
+		rawnat4_update_l4(*pskb, iph->daddr, new_addr);
+		iph->daddr = new_addr;
+	}
+
+	if (info->has_port) {
+
+		if (!info->port) {
+			get_random_bytes(&new_port, sizeof(new_port));
+			new_port = (new_port << 8) >> 4;
+		}else
+			new_port = info->port;
+		new_port = htons(new_port);
+		switch (iph->protocol) {
+		case IPPROTO_TCP:
+			tcph = transport_hdr;
+			inet_proto_csum_replace2(&tcph->check, *pskb, tcph->dest, new_port, true);
+			tcph->dest = new_port;
+			break;
+		case IPPROTO_UDP:
+		case IPPROTO_UDPLITE:
+			udph = transport_hdr;
+			cond = udph->check != 0;
+			cond |= (*pskb)->ip_summed == CHECKSUM_PARTIAL;
+			if (cond) {
+				inet_proto_csum_replace2(&udph->check, *pskb,
+							 udph->dest, new_port, true);
+				if (udph->check == 0)
+					udph->check = CSUM_MANGLED_0;
+			}
+			udph->dest = new_port;
+			break;
 		}
-                udph->dest = new_port;
-		break;
-        }
-
+	}
 	return XT_CONTINUE;
 }
 

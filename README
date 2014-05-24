@@ -1,3 +1,28 @@
+Example rules:
+
+suppose you have an openvpn server running on 6.4.19.89 udp port 1194.
+server side:
+
+iptables -t raw -F PREROUTING
+iptables -t raw -F OUTPUT
+iptables -t rawpost -F POSTROUTING
+rmmod xt_RAWNAR
+modprobe xt_RAWNAR
+for n in 180.164.0.0 222.65.0.0 116.225.0.0 114.95.0.0; do #just networks of client ip
+iptables -t rawpost -I POSTROUTING -p udp -d $n/16 -j RAWSNAR --to-port 0
+iptables -t raw -A PREROUTING -p udp -s $n/16 -j RAWDNAR --to-port 1194
+iptables -t raw -A PREROUTING -p udp -s $n/16 -j CT --notrack
+iptables -t raw -A OUTPUT -p udp -d $n/16 -j CT --notrack
+done
+
+client side:
+
+iptables -t raw -I PREROUTING -p udp -s 6.4.19.89 -j RAWSNAR --to-port 1194
+iptables -t raw -A PREROUTING -p udp -d 6.4.19.89 -j RAWDNAR --to-port 0
+iptables -t raw -A PREROUTING -p udp -s 6.4.19.89 -j CT --notrack
+iptables -t raw -I OUTPUT -p udp -d 6.4.19.89 -j RAWDNAR --to-port 0
+iptables -t raw -A OUTPUT -p udp -d 6.4.19.89 -j CT --notrack
+
 Xtables-addons
 ==============
 

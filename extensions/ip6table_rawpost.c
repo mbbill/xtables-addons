@@ -46,11 +46,13 @@ static struct xt_table rawpost6_itable = {
 	.me          = THIS_MODULE,
 };
 
-static unsigned int rawpost6_hook_fn(unsigned int hook, sk_buff_t *skb,
+//static unsigned int rawpost6_hook_fn(unsigned int hook, sk_buff_t *skb,
+static unsigned int rawpost6_hook_fn(const struct nf_hook_ops *ops, sk_buff_t *skb,
     const struct net_device *in, const struct net_device *out,
     int (*okfn)(struct sk_buff *))
 {
-	return ip6t_do_table(skb, hook, in, out, rawpost6_ptable);
+	//return ip6t_do_table(skb, hook, in, out, rawpost6_ptable);
+	return ip6t_do_table(skb, ops->hooknum, in, out, rawpost6_ptable);
 }
 
 static struct nf_hook_ops rawpost6_hook_ops __read_mostly = {
@@ -77,14 +79,14 @@ static int __init rawpost6_table_init(void)
 	return ret;
 
  out:
-	ip6t_unregister_table(rawpost6_ptable);
+	ip6t_unregister_table(&init_net, rawpost6_ptable);
 	return ret;
 }
 
 static void __exit rawpost6_table_exit(void)
 {
 	nf_unregister_hook(&rawpost6_hook_ops);
-	ip6t_unregister_table(rawpost6_ptable);
+	ip6t_unregister_table(&init_net, rawpost6_ptable);
 }
 
 module_init(rawpost6_table_init);

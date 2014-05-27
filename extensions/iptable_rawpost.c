@@ -47,11 +47,13 @@ static struct xt_table rawpost4_itable = {
 	.me          = THIS_MODULE,
 };
 
-static unsigned int rawpost4_hook_fn(unsigned int hook, sk_buff_t *skb,
+//static unsigned int rawpost4_hook_fn(unsigned int hook, sk_buff_t *skb,
+static unsigned int rawpost4_hook_fn(const struct nf_hook_ops *ops, sk_buff_t *skb,
     const struct net_device *in, const struct net_device *out,
     int (*okfn)(struct sk_buff *))
 {
-	return ipt_do_table(skb, hook, in, out, rawpost4_ptable);
+	//return ipt_do_table(skb, hook, in, out, rawpost4_ptable);
+	return ipt_do_table(skb, ops->hooknum, in, out, rawpost4_ptable);
 }
 
 static struct nf_hook_ops rawpost4_hook_ops __read_mostly = {
@@ -78,14 +80,14 @@ static int __init rawpost4_table_init(void)
 	return ret;
 
  out:
-	ipt_unregister_table(rawpost4_ptable);
+	ipt_unregister_table(&init_net, rawpost4_ptable);
 	return ret;
 }
 
 static void __exit rawpost4_table_exit(void)
 {
 	nf_unregister_hook(&rawpost4_hook_ops);
-	ipt_unregister_table(rawpost4_ptable);
+	ipt_unregister_table(&init_net, rawpost4_ptable);
 }
 
 module_init(rawpost4_table_init);
